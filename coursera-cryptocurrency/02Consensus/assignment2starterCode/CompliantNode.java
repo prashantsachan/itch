@@ -10,70 +10,59 @@ import java.util.function.Function;
 
 /* CompliantNode refers to a node that follows the rules (not malicious)*/
 public class CompliantNode implements Node {
-	private static final double holdRoundFraction = 0.4;
-	private final int nHold;
 	private Set<Transaction> receivedTxns;
-	private final int nRounds;
+	private Set<Transaction> acceptedTxns;
+	private HashMap<Transaction, Set<Integer>> txnSenders;
+	private int minNbrCount;
 	private int doneRounds;
-	private Map<Integer, Set<Transaction>>lastTransmitted;
-	private Set<Integer> malNodes;
+	private final int nRounds;
+//	private f
 	
     public CompliantNode(double p_graph, double p_malicious, double p_txDistribution, int numRounds) {
     		receivedTxns = new HashSet<>();
+    		acceptedTxns = new HashSet<>();
+    		txnSenders = new HashMap<>();
+    		doneRounds=0;
     		nRounds = numRounds;
-    		doneRounds= 0;
-    		lastTransmitted = new HashMap<>();
-    		malNodes = new HashSet<>();
-    		nHold = (int) Math.round(holdRoundFraction*nRounds);
     }
 
     public void setFollowees(boolean[] followees) {
+    		int count=0;
+    		for(boolean f:followees)
+    			count+=f?1:0;
+    		minNbrCount= (int) Math.round(count*0.5);
     }
 
     public void setPendingTransaction(Set<Transaction> pendingTransactions) {
-    		receivedTxns  = pendingTransactions;
+    		acceptedTxns  = new HashSet<>(pendingTransactions);
+    		receivedTxns  = new HashSet<>(pendingTransactions);
+
     }
 
     public Set<Transaction> sendToFollowers() {
-		return new HashSet<>(receivedTxns);
+    		if(doneRounds < nRounds)
+    			return new HashSet<>(receivedTxns);
+    		else {
+    			System.out.println("sending final txns");
+    			return acceptedTxns;
+    		}
    }
 
     public void receiveFromFollowees(Set<Candidate> candidates) {
     		doneRounds++;
-    		if(doneRounds ==1) {
-    			for(Candidate c: candidates) {
-    				if(!lastTransmitted.containsKey(c.sender))
-    					lastTransmitted.put(c.sender, new HashSet<>());
-    				lastTransmitted.get(c.sender).add(c.tx);
-    			}
-    		}else if(doneRounds <=  nHold){
-    			Map<Integer, Set<Transaction>> txns = groupBySender(candidates);
-    			for(Integer sender: txns.keySet()) {
-    				if(! txns.get(sender).equals(lastTransmitted.get(sender)))
-    					malNodes.add(sender);
-    			}
-    			// if this is the last Hold Round, add all the transactions from honest nodes to received list
-    			if(doneRounds +1 > nHold) {
-    				for(Integer sender : lastTransmitted.keySet()) {
-    					for(Transaction t: lastTransmitted.get(sender)) {
-    						receivedTxns.add(t);
-    					}
-    				}
-    			}
-    		}else {
-    			for(Candidate c: candidates) {
-    				if(!malNodes.contains(c.sender))
-    					receivedTxns.add(c.tx);
-    			}
-    		}
-    }
-    private Map<Integer, Set<Transaction>> groupBySender(Set<Candidate> candidates){
-    		Map<Integer, Set<Transaction>> txns = new HashMap<>();
     		for(Candidate c: candidates) {
-    			if(!txns.containsKey(c.sender))
-    				txns.put(c.sender, new HashSet<>());
-    			txns.get(c.sender).add(c.tx);
+    			if(acceptedTxns.contains(c.tx))
+    				continue;
+    			if(!txnSenders.containsKey(c.tx))
+    				txnSenders.put(c.tx, new HashSet<>());
+    			txnSenders.get(c.tx).add(c.sender);
+    			receivedTxns.add(c.tx);
     		}
-    		return txns;
-    }
+    		for (Transaction t: txnSenders.keySet()) {
+    			if(txnSenders.get(t).size()>=minNbrCount) {
+    				acceptedTxns.add(t);
+    			}
+    		}
+
+   }
 }
