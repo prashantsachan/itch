@@ -69,19 +69,16 @@ public class BlockChain {
 
     		// validate that it points to valid block
     		if(! hashToHeight.containsKey(prevBlockHash)) {
-    			System.out.println("prevBlockHash NOT FOUND");
     			return false;
     		}
     		TxHandler handler = new TxHandler(hashToUTXOs.get(prevBlockHash));
     		for(Transaction tx: block.getTransactions()) {
     			if( ! handler.isValidTx(tx)){
-    				System.out.println("invlaid Transaction FOUND");
     				return false;
     			}
     		}
     		// check for double spend across transactions in the block
     		if(hasDoubleSpend(block)) {
-    			System.out.println("double spend found in a block");
     			return false;
     		}
     		// create new UTXOPool for this block
@@ -90,11 +87,10 @@ public class BlockChain {
     		// add entry for the new block in the height & UTXO's map
     		hashToHeight.put(BlockHash, blockHeight);
     		hashToUTXOs.put(BlockHash, newUTXOs);
-    		System.out.printf("new Block with %d UTXOs \n", newUTXOs.getAllUTXO().size());
     		// updateMaxheight block value, remove entries for old blocks if maxheight is increased 
     		if(blockHeight > hashToHeight.get(new ByteArrayWrapper(maxHeightBlock.getHash()))) {
     			maxHeightBlock = block;
-    			int minEligibleHeight = blockHeight-CUT_OFF_AGE +1;
+    			int minEligibleHeight = blockHeight-CUT_OFF_AGE ;
     			for(Iterator<ByteArrayWrapper> hashIt= hashToHeight.keySet().iterator(); hashIt.hasNext();) {
     				ByteArrayWrapper hash = hashIt.next();
     				if(hashToHeight.get(hash)< minEligibleHeight) {

@@ -30,11 +30,9 @@ public class TxHandler {
         		Transaction.Input txInput = tx.getInput(i);
         		UTXO utxo = new UTXO(txInput.prevTxHash, txInput.outputIndex);
         		if(!pool.contains(utxo)) {
-        			System.out.printf("UTXO not found for input : %d, utxoSize:%d \n", i, pool.getAllUTXO().size());
         			return false;
         		}
         		else if(spentUTXO.contains(utxo)) {
-        			System.out.println("double spend found within a transaction");
         			return false;
         		}
         		else if (!Crypto.verifySignature(pool.getTxOutput(utxo).address,tx.getRawDataToSign(i), txInput.signature))
